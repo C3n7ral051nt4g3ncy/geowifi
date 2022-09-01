@@ -14,73 +14,71 @@ with open('utils/API.yaml', 'r') as APIconfig:
 
 
 def wigle_bssid(bssid):
-    if cfg['wigle_auth']:
-        headers = {
-            'accept': 'application/json',
-            'Authorization': 'Basic ' + cfg['wigle_auth']
-        }
-        params = (
-            ('netid', bssid),
-        )
-        response = requests.get('https://api.wigle.net/api/v2/network/detail', headers=headers, params=params)
-        if response.json()['success'] == 'true':
-            lat = response.json()['results'][0]['trilat']
-            lon = response.json()['results'][0]['trilong']
-            ssid = response.json()['results'][0]['ssid']
-            data = {"bssid": bssid, "ssid": ssid, "lat": lat, "lon": lon}
-
-            return data
-    else:
+    if not cfg['wigle_auth']:
         return 'AUTH code not configured or API limit exceeded'
+    headers = {
+        'accept': 'application/json',
+        'Authorization': 'Basic ' + cfg['wigle_auth']
+    }
+    params = (
+        ('netid', bssid),
+    )
+    response = requests.get('https://api.wigle.net/api/v2/network/detail', headers=headers, params=params)
+    if response.json()['success'] == 'true':
+        lat = response.json()['results'][0]['trilat']
+        lon = response.json()['results'][0]['trilong']
+        ssid = response.json()['results'][0]['ssid']
+        return {"bssid": bssid, "ssid": ssid, "lat": lat, "lon": lon}
 
 
 def wigle_ssid(ssid):
-    if cfg['wigle_auth']:
-        headers = {
-            'accept': 'application/json',
-            'Authorization': 'Basic ' + cfg['wigle_auth']
-        }
-        params = (
-            ('onlymine', 'false'),
-            ('freenet', 'false'),
-            ('paynet', 'false'),
-            ('ssid', ssid)
-        )
-        response = requests.get('https://api.wigle.net/api/v2/network/search', headers=headers, params=params)
-        if response.json()['success']:
-            json_data = {'results': []}
-            for result in response.json()['results']:
-                lat = result['trilat']
-                lon = result['trilong']
-                address = '{} {} {} {} {} {}'.format(str(result['housenumber']), result['road'], result['city'],
-                                                     str(result['postalcode']), result['region'],
-                                                     result['country']).replace('None ', '')
-                data = {'lat': lat, 'lon': lon, 'address': address}
-                json_data['results'].append(data)
-            return json_data
-    else:
+    if not cfg['wigle_auth']:
         return 'AUTH code not configured or API limit exceeded'
+    headers = {
+        'accept': 'application/json',
+        'Authorization': 'Basic ' + cfg['wigle_auth']
+    }
+    params = (
+        ('onlymine', 'false'),
+        ('freenet', 'false'),
+        ('paynet', 'false'),
+        ('ssid', ssid)
+    )
+    response = requests.get('https://api.wigle.net/api/v2/network/search', headers=headers, params=params)
+    if response.json()['success']:
+        json_data = {'results': []}
+        for result in response.json()['results']:
+            lat = result['trilat']
+            lon = result['trilong']
+            address = f"{str(result['housenumber'])} {result['road']} {result['city']} {str(result['postalcode'])} {result['region']} {result['country']}".replace(
+                'None ', ''
+            )
+
+            data = {'lat': lat, 'lon': lon, 'address': address}
+            json_data['results'].append(data)
+        return json_data
 
 
 def milnikov_bssid(bssid):
-    response = requests.get('https://api.mylnikov.org/geolocation/wifi?v=1.1&data=open&bssid=' + bssid)
+    response = requests.get(
+        f'https://api.mylnikov.org/geolocation/wifi?v=1.1&data=open&bssid={bssid}'
+    )
+
     if response.json()['result'] == 200:
         lat = response.json()['data']['lat']
         lon = response.json()['data']['lon']
-        data = {"bssid": bssid, "lat": lat, "lon": lon}
-
-        return data
+        return {"bssid": bssid, "lat": lat, "lon": lon}
 
 
 def openwifi_bssid(bssid):
     response = requests.get('https://openwifi.su/api/v1/bssids/' + bssid.replace(':', ''))
-    if 'BSSIDISNULL' not in response.text:
-        if response.json()['count_results'] != 0:
-            lat = response.json()['lat']
-            lon = response.json()['lon']
-            data = {"bssid": bssid, "lat": lat, "lon": lon}
-
-            return data
+    if (
+        'BSSIDISNULL' not in response.text
+        and response.json()['count_results'] != 0
+    ):
+        lat = response.json()['lat']
+        lon = response.json()['lon']
+        return {"bssid": bssid, "lat": lat, "lon": lon}
 
 
 def apple_bssid(bssid):
@@ -97,12 +95,12 @@ def apple_bssid(bssid):
     response = requests.post('https://gs-loc.apple.com/clls/wloc', headers=headers, data=data, verify=False)
     bssid_response = BSSIDApple_pb2.BSSIDResp()
     bssid_response.ParseFromString(response.content[10:])
-    lat = re.search('lat: (\S*)', str(bssid_response)).group(1)
+    lat = re.search('lat: (\S*)', str(bssid_response))[1]
     if '18000000000' not in lat:
         latlist = list(str(lat))
         latlist.insert(2, '.')
         lat = "".join(latlist)
-        lon = re.search('lon: (\S*)', str(bssid_response)).group(1)
+        lon = re.search('lon: (\S*)', str(bssid_response))[1]
         lonlist = list(str(lon))
         lonlist.insert(2, '.')
         lon = "".join(lonlist)

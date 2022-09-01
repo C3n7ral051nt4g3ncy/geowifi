@@ -2,6 +2,4 @@ import requests
 
 
 def mac(bssid):
-    response = requests.get('http://macvendors.co/api/' + bssid)
-
-    return response
+    return requests.get(f'http://macvendors.co/api/{bssid}')
