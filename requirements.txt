@@ -4,4 +4,4 @@ folium
 google
 rich
 google-api-python-client
-protobuf == 3.19.5
+protobuf == 4.25.8
